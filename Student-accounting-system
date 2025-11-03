@@ -1,0 +1,193 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <fstream>
+#include <algorithm>
+#include <cctype>
+#include <iomanip> // добавлен для setprecision
+#include <windows.h>
+using namespace std;
+
+class Student {
+private:
+    string name;
+    int age;
+    double gpa; // средний балл
+    
+public:
+    // Конструктор
+    Student(string n, int a, double g) : name(n), age(a), gpa(g) {} 
+    
+    //Геттер
+    string getName() const {return name; }
+    int getAge() const {return age; }
+    double getGPA() const {return gpa; }
+    
+    
+    //Сеттер
+    void setName(const string& n) {
+        if (n.length() >= 2) name = n;
+    }
+    void setAge(int a) {
+        if (a >= 10 && a <= 100) age = a;
+    }
+    void setGPA(double g) {
+        if (g >= 0.0 && g <= 4.0) gpa = g;
+    }
+    
+    
+    void print() const {
+        cout << "Имя: " << name
+             << "/ Возраст: " << age
+             << "/ Средний бал: " << fixed << setprecision(2) << gpa << endl; 
+    }
+    
+    void saveToFile(ofstream& file) const {
+        file << name << "|" << age << "|" << gpa << "\n"; 
+    }
+    
+    static Student fromString(const string& line) {
+        size_t pos1 = line.find('|');
+        size_t pos2 = line.find('|', pos1 + 1);
+        
+        string n = line.substr(0, pos1);
+        int a = stoi(line.substr(pos1 + 1, pos2 - pos1 - 1));
+        double g = stod(line.substr(pos2 + 1));
+        
+        return Student(n, a, g);
+    }
+};
+
+void loadStudents(vector<Student>& students) {
+    ifstream file("students.txt");
+    if (!file.is_open()) return;
+    
+    string line;
+    while (getline(file, line)) {
+        if (!line.empty()) {
+            students.push_back(Student::fromString(line));
+        }
+    }
+    file.close();
+    cout << "Загружено студентов: " << students.size() << endl;
+}
+
+void saveStudents(const vector<Student>& students) {
+    ofstream file("students.txt");
+    for (const auto& s : students) {
+        s.saveToFile(file);
+    }
+    file.close();
+}
+
+void addStudent(vector<Student>& students) {
+    string name;
+    int age;
+    double gpa;
+    
+    cout << "Введите имя: ";
+    cin.ignore();
+    getline(cin, name);
+    
+    cout << "Введите возраст: ";
+    cin >> age;
+    
+    cout << "Введите GPA (0.0 - 4.0): "; 
+    cin >> gpa;
+    
+    students.emplace_back(name, age, gpa);
+    cout << "Студент добавлен! \n";
+}
+
+void showAllStudents(const vector<Student>& students) {
+    if (students.empty()) {
+        cout << "Список студентов пуст \n";
+        return;
+    }
+    cout << "\n Список студентов: \n";
+    for (int i = 0; i < students.size(); i++) {
+        cout << (i + 1) << ". ";
+        students[i].print();
+    }
+    cout << endl;
+}
+
+void findStudent(const vector<Student>& students) {
+    string name;
+    cout << "Введите имя для поиска: ";
+    cin.ignore();
+    getline(cin, name);
+    
+    transform(name.begin(), name.end(), name.begin(), ::tolower);
+    
+    bool found = false;
+    for(const auto& s : students) {
+        string studentName = s.getName();
+        transform(studentName.begin(), studentName.end(), studentName.begin(), ::tolower);
+        if (studentName.find(name) != string::npos) {
+            s.print(); 
+            found = true;
+        }
+    }
+    
+    if (!found) {
+        cout << "Студент не найден.\n"; 
+    }
+}
+
+void deleteStudent(vector<Student>& students) {
+    if (students.empty()) {
+        cout << "Записей нет для удаления \n";
+        return;
+    }
+    showAllStudents(students);
+    cout << "Введите номер студента для удаления: "; 
+    int index;
+    cin >> index;
+    
+    if (index >= 1 && index <= students.size()) {
+        students.erase(students.begin() + index - 1);
+        cout << "Студент удален. \n";
+    } else {
+        cout << "Неверный номер. \n";
+    }
+}
+
+int main() {
+    //ENABLE_UTF8_CONSOLE();
+
+    SetConsoleOutputCP (CP_UTF8);
+    SetConsoleCP (CP_UTF8);
+
+    vector<Student> students;
+    loadStudents(students);
+
+    const char* menu[] = {
+        "\n=== СИСТЕМА УЧЁТА СТУДЕНТОВ ===",
+        "1. Добавить студента",
+        "2. Показать всех",
+        "3. Найти по имени",
+        "4. Удалить студента",
+        "5. Выход",
+        "Ваш выбор: "
+    };
+
+    char choice;
+    do {
+        for (const char* item : menu) cout << item << '\n';
+        cin >> choice;
+
+        if (choice == '1') addStudent(students);
+        else if (choice == '2') showAllStudents(students);
+        else if (choice == '3') findStudent(students);
+        else if (choice == '4') deleteStudent(students);
+        else if (choice == '5') {
+            cout << "Сохраняем данные...\n";
+            saveStudents(students);
+            cout << "До свидания! \n";
+        }
+        else cout << "Неверный выбор. Попробуйте снова.\n";
+    } while (choice != '5');
+
+    return 0;
+}
